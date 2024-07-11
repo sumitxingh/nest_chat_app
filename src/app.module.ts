@@ -19,6 +19,7 @@ import { OperationModule } from './user/operation/operation.module';
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+    ChatModule,
     UserModule,
     RouterModule.register([
       {
