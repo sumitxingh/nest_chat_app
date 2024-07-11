@@ -45,6 +45,29 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       client.on('typing', (isTyping: boolean) => {
         this.server.emit('typing', { username: user.username, isTyping });
       });
+
+      // send messages
+      client.on('message', async (data: { message: string, send_on: Date }) => {
+        // console.log(`Message from ${user.username}: ${data.message} (${data.send_on})`);
+        // console.log(data.send_on)
+        this.server.emit('receive-message', { username: user.username, message: data.message, send_on: data.send_on });
+      });
+
+      // send private messages
+      client.on('private-message', async (data: { to: string, message: string }) => {
+        // const toClient = Array.from(this.connectedUsers.entries()).find(([, username]) => username === data.to);
+        const toClient = await this.prismaService.user.findUnique({ where: { username: data.to } });
+        if (toClient) {
+          this.server.to(toClient.username).emit('private-message', { from: user.username, message: data.message });
+        }
+      });
+
+      // receive private messages
+      client.on('private-message', async (data: { from: string, message: string }) => {
+        this.server.to(user.username).emit('private-message', { from: data.from, message: data.message });
+      });
+
+
     } catch (error) {
       if (error instanceof TokenExpiredError) {
         console.error(`Token expired: ${error.message}`);
