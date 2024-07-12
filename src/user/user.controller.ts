@@ -25,7 +25,7 @@ export class UsersController {
   @Get('all')
   @UseGuards(AccessTokenGuard)
   async getAllUsers(@GetCurrentUser() user: User) {
-    const allUsers = await this.usersService.getAllUsers();
+    const allUsers = await this.usersService.getAllUsers(user.username);
     return {
       data: allUsers,
       meta: {

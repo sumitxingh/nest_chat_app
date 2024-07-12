@@ -1,8 +1,10 @@
+import { ChatService } from './chat.service';
 import { WebSocketGateway, WebSocketServer, OnGatewayConnection, OnGatewayDisconnect } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
 import { TokenExpiredError } from 'jsonwebtoken';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { SocketSessionMiddleware } from 'src/common/middleware/socket-session.middleware';
 
 @WebSocketGateway({
   cors: {
@@ -18,6 +20,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   constructor(
     private readonly jwtService: JwtService,
     private readonly prismaService: PrismaService,
+    private readonly chatService: ChatService,
   ) { }
 
   async handleConnection(client: Socket): Promise<void> {
@@ -38,6 +41,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }
 
       this.connectedUsers.set(client.id, user.username);
+      // console.log session id and user id
+      console.log(client.handshake.auth)
       console.log(`Client ${client.id} connected as ${user.username}`);
       this.server.emit('users', Array.from(this.connectedUsers.values()));
 
@@ -47,18 +52,52 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       });
 
       // send messages
-      client.on('message', async (data: { message: string, send_on: Date }) => {
-        this.server.emit('receive-message', { username: user.username, message: data.message, send_on: data.send_on });
+      client.on('message', async (data: { from: string, to: string, message: string, send_on: Date }) => {
+
+        this.server.emit('receive-message', { from: user.username, to: data.to, message: data.message, send_on: data.send_on });
       });
 
       // send private messages
-      client.on('private-message', async (data: { to: string, message: string }) => {
-        // const toClient = Array.from(this.connectedUsers.entries()).find(([, username]) => username === data.to);
+      // client.on('private-message', async (data: { from: string, to: string, message: string, send_on: Date }) => {
+      //   const toClient = await this.prismaService.user.findUnique({ where: { username: data.to } });
+      //   // await this.chatService.handlePrivateMessage({ from: user.username, to: data.to, message: data.message });
+      //   if (toClient) {
+      //     this.server.to(toClient.username).emit('receive-private-message', { from: user.username, to: data.to, message: data.message, send_on: data.send_on });
+      //     console.log(`Message sent to ${data.to}: ${data.message}`);
+
+      //   } else {
+      //     client.emit('private-message-error', { message: 'Recipient not found' });
+      //   }
+      // });
+
+      client.on('private-message', async (data: { from: string, to: string, message: string, send_on: Date }) => {
         const toClient = await this.prismaService.user.findUnique({ where: { username: data.to } });
+
         if (toClient) {
-          this.server.to(toClient.username).emit('private-message', { from: user.username, message: data.message });
+          const room = `private-${data.from}-${data.to}`; // Unique room identifier
+
+          // Join the sender to the room
+          client.join(room);
+
+          // Emit the private message to the room
+          this.server.to(room).emit('receive-private-message', { from: data.from, to: data.to, message: data.message, send_on: data.send_on });
+          console.log(`Message sent to room ${room}: ${data.message}`);
+
+          // Optionally, you can also check if the recipient is connected and join them to the room
+          const recipientSocketId = Array.from(this.connectedUsers.entries()).find(([, username]) => username === data.to)?.[0];
+
+          if (recipientSocketId) {
+            // Join the recipient to the same room
+            this.server.sockets.sockets.get(recipientSocketId)?.join(room);
+            console.log(`recipientSocketId: ${recipientSocketId} joined to ${room}`)
+          }
+
+        } else {
+          client.emit('private-message-error', { message: 'Recipient not found' });
         }
       });
+
+
 
       // receive private messages
       client.on('private-message', async (data: { from: string, message: string }) => {

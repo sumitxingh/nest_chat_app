@@ -31,8 +31,8 @@ export class UsersService {
     return this.prisma.user.findUnique({ where: { email } });
   }
 
-  async getAllUsers() {
-    const allUsers = await this.prisma.user.findMany({});
+  async getAllUsers(usernaem: string) {
+    const allUsers = await this.prisma.user.findMany({ where: { NOT: { username: usernaem } } });
     const allUsersResponse = allUsers.map((user) => plainToInstance(UserResponseDto, user));
     return allUsersResponse
   }
