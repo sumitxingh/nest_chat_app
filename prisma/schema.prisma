@@ -9,18 +9,76 @@ datasource db {
 }
 
 model User {
-  id            Int      @id @default(autoincrement())
-  unique_id     String   @unique @default(uuid())
-  username      String   @unique
-  full_name     String?
-  profile_pic   String?
-  password      String
-  refresh_token String?
-  email         String   @unique
-  reset_token   String?
-  is_active     Boolean  @default(true)
-  created_at    DateTime @default(now())
-  created_by    String?
-  updated_at    DateTime @updatedAt
-  updated_by    String?
+  id               Int                @id @default(autoincrement())
+  unique_id        String             @unique @default(uuid())
+  username         String             @unique
+  full_name        String?
+  profile_pic      String?
+  password         String
+  refresh_token    String?
+  email            String             @unique
+  reset_token      String?
+  is_active        Boolean            @default(true)
+  created_at       DateTime           @default(now())
+  created_by       String?
+  updated_at       DateTime           @updatedAt
+  updated_by       String?
+  Message          Message[]          @relation("SendMessages")
+  UserConversation UserConversation[]
+  Group            Group[]
+
+  @@map("user")
+}
+
+model Message {
+  id              Int          @id @default(autoincrement())
+  unique_id       String       @unique @default(uuid())
+  content         String
+  send_at         DateTime     @default(now())
+  sender_id       String
+  conversation_id String
+  read            Boolean      @default(false)
+  sender          User         @relation("SendMessages", fields: [sender_id], references: [unique_id])
+  conversation    Conversation @relation(fields: [conversation_id], references: [unique_id])
+
+  @@map("message")
+}
+
+model Conversation {
+  id           Int                @id @default(autoincrement())
+  unique_id    String             @unique @default(uuid())
+  is_group     Boolean            @default(false)
+  created_at   DateTime           @default(now())
+  updated_at   DateTime           @updatedAt
+  messages     Message[]
+  participants UserConversation[]
+  Group        Group?
+
+  @@map("conversation")
+}
+
+model UserConversation {
+  id              Int          @id @default(autoincrement())
+  unique_id       String       @unique @default(uuid())
+  user_id         String
+  conversation_id String
+  joined_at       DateTime     @default(now())
+  user            User         @relation(fields: [user_id], references: [unique_id])
+  conversation    Conversation @relation(fields: [conversation_id], references: [unique_id])
+
+  @@unique([user_id, conversation_id])
+  @@map("user_conversation")
+}
+
+model Group {
+  id           Int          @id @default(autoincrement())
+  unique_id    String       @unique @default(uuid())
+  name         String
+  description  String?
+  created_at   DateTime     @default(now())
+  created_by   String
+  creator      User         @relation(fields: [created_by], references: [unique_id])
+  conversation Conversation @relation(fields: [unique_id], references: [unique_id])
+
+  @@map("group")
 }

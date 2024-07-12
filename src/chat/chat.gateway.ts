@@ -48,8 +48,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       // send messages
       client.on('message', async (data: { message: string, send_on: Date }) => {
-        // console.log(`Message from ${user.username}: ${data.message} (${data.send_on})`);
-        // console.log(data.send_on)
         this.server.emit('receive-message', { username: user.username, message: data.message, send_on: data.send_on });
       });
 
