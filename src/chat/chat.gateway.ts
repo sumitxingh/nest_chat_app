@@ -4,7 +4,6 @@ import { Server, Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
 import { TokenExpiredError } from 'jsonwebtoken';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { SocketSessionMiddleware } from 'src/common/middleware/socket-session.middleware';
 
 @WebSocketGateway({
   cors: {
@@ -57,24 +56,14 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         this.server.emit('receive-message', { from: user.username, to: data.to, message: data.message, send_on: data.send_on });
       });
 
-      // send private messages
-      // client.on('private-message', async (data: { from: string, to: string, message: string, send_on: Date }) => {
-      //   const toClient = await this.prismaService.user.findUnique({ where: { username: data.to } });
-      //   // await this.chatService.handlePrivateMessage({ from: user.username, to: data.to, message: data.message });
-      //   if (toClient) {
-      //     this.server.to(toClient.username).emit('receive-private-message', { from: user.username, to: data.to, message: data.message, send_on: data.send_on });
-      //     console.log(`Message sent to ${data.to}: ${data.message}`);
-
-      //   } else {
-      //     client.emit('private-message-error', { message: 'Recipient not found' });
-      //   }
-      // });
 
       client.on('private-message', async (data: { from: string, to: string, message: string, send_on: Date }) => {
         const toClient = await this.prismaService.user.findUnique({ where: { username: data.to } });
+        let conversationId = await this.chatService.getConversationId({ from: data.from, to: data.to })
 
         if (toClient) {
-          const room = `private-${data.from}-${data.to}`; // Unique room identifier
+          const room = `private-room-${conversationId}`; // Unique room identifier
+          console.log(`room ${room}`)
 
           // Join the sender to the room
           client.join(room);
@@ -91,7 +80,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
             this.server.sockets.sockets.get(recipientSocketId)?.join(room);
             console.log(`recipientSocketId: ${recipientSocketId} joined to ${room}`)
           }
-
+          await this.chatService.handlePrivateMessage({ from: user.username, to: data.to, message: data.message, conversationId });
         } else {
           client.emit('private-message-error', { message: 'Recipient not found' });
         }

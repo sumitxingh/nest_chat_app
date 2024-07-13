@@ -9,23 +9,23 @@ datasource db {
 }
 
 model User {
-  id               Int                @id @default(autoincrement())
-  unique_id        String             @unique @default(uuid())
-  username         String             @unique
-  full_name        String?
-  profile_pic      String?
-  password         String
-  refresh_token    String?
-  email            String             @unique
-  reset_token      String?
-  is_active        Boolean            @default(true)
-  created_at       DateTime           @default(now())
-  created_by       String?
-  updated_at       DateTime           @updatedAt
-  updated_by       String?
-  Message          Message[]          @relation("SendMessages")
-  UserConversation UserConversation[]
-  Group            Group[]
+  id            Int            @id @default(autoincrement())
+  unique_id     String         @unique @default(uuid())
+  username      String         @unique
+  full_name     String?
+  profile_pic   String?
+  password      String
+  refresh_token String?
+  email         String         @unique
+  reset_token   String?
+  is_active     Boolean        @default(true)
+  created_at    DateTime       @default(now())
+  created_by    String?
+  updated_at    DateTime       @updatedAt
+  updated_by    String?
+  Message       Message[]      @relation("SendMessages")
+  Participants  Participants[]
+  Group         Group[]
 
   @@map("user")
 }
@@ -45,19 +45,19 @@ model Message {
 }
 
 model Conversation {
-  id           Int                @id @default(autoincrement())
-  unique_id    String             @unique @default(uuid())
-  is_group     Boolean            @default(false)
-  created_at   DateTime           @default(now())
-  updated_at   DateTime           @updatedAt
+  id           Int            @id @default(autoincrement())
+  unique_id    String         @unique @default(uuid())
+  is_group     Boolean        @default(false)
+  created_at   DateTime       @default(now())
+  updated_at   DateTime       @updatedAt
   messages     Message[]
-  participants UserConversation[]
+  participants Participants[]
   Group        Group?
 
   @@map("conversation")
 }
 
-model UserConversation {
+model Participants {
   id              Int          @id @default(autoincrement())
   unique_id       String       @unique @default(uuid())
   user_id         String
@@ -67,7 +67,7 @@ model UserConversation {
   conversation    Conversation @relation(fields: [conversation_id], references: [unique_id])
 
   @@unique([user_id, conversation_id])
-  @@map("user_conversation")
+  @@map("participants")
 }
 
 model Group {
