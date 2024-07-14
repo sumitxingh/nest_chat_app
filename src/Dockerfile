@@ -5,7 +5,7 @@ FROM node:20
 WORKDIR /app /upload
 
 # Copy package.json and yarn.lock to work directory
-COPY ../package.json ../yarn.lock ./
+COPY ../package.json  ./
 
 # Install dependencies using Yarn
 RUN yarn install
