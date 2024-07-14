@@ -2,16 +2,15 @@
 FROM node:20
 
 # Create and set the working directory
-WORKDIR /app /upload
+WORKDIR /app
 
 # Copy package.json and yarn.lock to work directory
-COPY ../package.json  ./
+COPY . .
 
 # Install dependencies using Yarn
 RUN yarn install
 
 # Copy the rest of the application code to work directory
-COPY . .
 
 # Expose the port your app runs on
 EXPOSE 4500
