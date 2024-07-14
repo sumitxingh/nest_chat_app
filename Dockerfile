@@ -13,8 +13,11 @@ RUN yarn
 # Copy the rest of the application code to work directory
 COPY . .
 
+# Generate Prisma client
+RUN npx prisma generate
+
 # Expose the port your app runs on
 EXPOSE 4500
 
 # Command to run the application
-CMD ["yarn", "start:dev"]
+CMD ["yarn", "start:prod"]

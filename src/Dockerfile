@@ -4,23 +4,15 @@ FROM node:20
 # Create and set the working directory
 WORKDIR /app
 
-# Print the current directory and list files
-RUN echo "Current directory after WORKDIR:" && pwd && ls -al
+# Copy package.json and package-lock.json to work directory
+COPY ../package.json ./
+COPY ../yarn.lock ./
 
-# Copy package.json and yarn.lock to work directory
-COPY package.json yarn.lock ./
-
-# Print the current directory and list files
-RUN echo "Current directory after copying package.json and yarn.lock:" && pwd && ls -al
-
-# Install dependencies using Yarn
+# Install dependencies
 RUN yarn
 
 # Copy the rest of the application code to work directory
 COPY . .
-
-# Print the current directory and list files
-RUN echo "Current directory after copying application code:" && pwd && ls -al
 
 # Expose the port your app runs on
 EXPOSE 4500
