@@ -34,4 +34,18 @@ export class UsersController {
       }
     };
   }
+
+  @Get('messages')
+  @UseGuards(AccessTokenGuard)
+  async getAllMessages(@GetCurrentUser() user: User) {
+    const allMessages = await this.usersService.getAllMessages(user);
+    return {
+      data: allMessages,
+      meta: {
+        message: 'All messages',
+        type: 'allMessagesResponseDto',
+      }
+    };
+  }
+
 }
