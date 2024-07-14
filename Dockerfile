@@ -14,7 +14,7 @@ RUN npm install
 COPY . .
 
 # Expose the port your app runs on
-EXPOSE 4200
+EXPOSE 4500
 
 # Generate Prisma client and run migrations
 RUN npx prisma generate
