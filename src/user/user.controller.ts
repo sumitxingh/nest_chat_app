@@ -25,7 +25,7 @@ export class UsersController {
   @Get('all')
   @UseGuards(AccessTokenGuard)
   async getAllUsers(@GetCurrentUser() user: User) {
-    const allUsers = await this.usersService.getAllUsers();
+    const allUsers = await this.usersService.getAllUsers(user.username);
     return {
       data: allUsers,
       meta: {
@@ -34,4 +34,18 @@ export class UsersController {
       }
     };
   }
+
+  @Get('messages')
+  @UseGuards(AccessTokenGuard)
+  async getAllMessages(@GetCurrentUser() user: User) {
+    const allMessages = await this.usersService.getAllMessages(user);
+    return {
+      data: allMessages,
+      meta: {
+        message: 'All messages',
+        type: 'allMessagesResponseDto',
+      }
+    };
+  }
+
 }

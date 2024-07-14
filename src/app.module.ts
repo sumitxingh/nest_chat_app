@@ -11,12 +11,15 @@ import { ConfigModule } from '@nestjs/config';
 import { ResponseInterceptor } from './interceptor/response.interceptor';
 import { MulterModule } from '@nestjs/platform-express';
 import { UserModule } from './user/user.module';
+import { ChatModule } from './chat/chat.module';
+import { OperationModule } from './user/operation/operation.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+    ChatModule,
     UserModule,
     RouterModule.register([
       {
@@ -29,7 +32,7 @@ import { UserModule } from './user/user.module';
           },
           {
             path: 'operation',
-            module: AuthModule
+            module: OperationModule
           }
         ]
       }
@@ -41,6 +44,7 @@ import { UserModule } from './user/user.module';
         dest: './upload',
       }),
     }),
+    ChatModule,
   ],
   controllers: [AppController],
   providers: [

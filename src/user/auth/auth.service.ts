@@ -63,14 +63,14 @@ export class AuthService {
   private generateAccessToken(id: string): string {
     return new JwtService({
       secret: process.env.JWT_SECRET || 'jwt-secret',
-      signOptions: { expiresIn: '5min' },
+      signOptions: { expiresIn: '30min' },
     }).sign({ sub: id });
   }
 
   private generateRefreshToken(id: string): string {
     return new JwtService({
       secret: process.env.REFRESH_TOKEN_SECRET || 'refresh-secret',
-      signOptions: { expiresIn: '10min' },
+      signOptions: { expiresIn: '60min' },
     }).sign({ sub: id });
   }
 
