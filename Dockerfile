@@ -5,10 +5,10 @@ FROM node:20
 WORKDIR /app
 
 # Copy package.json and package-lock.json to work directory
-COPY package*.json ./
+COPY package*.json yarn.lock ./
 
 # Install dependencies
-RUN npm install
+RUN yarn
 
 # Copy the rest of the application code to work directory
 COPY . .
@@ -16,9 +16,5 @@ COPY . .
 # Expose the port your app runs on
 EXPOSE 4500
 
-# Generate Prisma client and run migrations
-RUN npx prisma generate
-RUN npx prisma migrate dev
-
 # Command to run the application
-CMD ["npm", "run", "start:dev"]
+CMD ["yarn", "start:dev"]
