@@ -1,7 +1,11 @@
-import { Controller, Get, Post, Body, Param } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UseGuards } from '@nestjs/common';
 import { ChatService } from './chat.service';
+import { AccessTokenGuard } from 'src/user/auth/guards/access_token.guard';
+import { User } from '@prisma/client';
+import { GetCurrentUser } from 'src/decorator/currentUser.decorator';
 
 @Controller()
+@UseGuards(AccessTokenGuard)
 export class ChatController {
   constructor(private readonly chatService: ChatService) { }
 
@@ -10,9 +14,9 @@ export class ChatController {
     return this.chatService.createNewGroup(createGroupDto.name, createGroupDto.description, createGroupDto.creatorId);
   }
 
-  @Get('groups/:userId')
-  async getUserGroups(@Param('userId') userId: string) {
-    return this.chatService.getUserGroups(userId).then((groups) => {
+  @Get('groups')
+  async getUserGroups(@GetCurrentUser() user: User) {
+    return this.chatService.getUserGroups(user.unique_id).then((groups) => {
       return {
         data: groups,
         meta: {
@@ -25,7 +29,6 @@ export class ChatController {
 
   @Get('messages')
   async getAllMessages() {
-    // const allMessage = await this.chatService.getAllMessages();
     return {
       data: 'allMessage',
       meta: {

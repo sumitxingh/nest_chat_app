@@ -21,6 +21,7 @@ import { OperationModule } from './user/operation/operation.module';
     }),
     ChatModule,
     UserModule,
+    AuthModule,
     RouterModule.register([
       {
         path: 'user',
