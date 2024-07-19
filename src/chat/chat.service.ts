@@ -93,6 +93,7 @@ export class ChatService {
 
       return group;
     } catch (error) {
+      console.log(error);
       // Handle or log error appropriately
       throw new Error(`Failed to create group: ${error.message}`);
     }
@@ -109,7 +110,7 @@ export class ChatService {
 
   async removeUserFromGroup(groupId: string, userId: string) {
     const group = await this.findGroupById(groupId);
-    
+
     await this.prismaService.participants.delete({
       where: {
         user_id_conversation_id: {
@@ -136,7 +137,7 @@ export class ChatService {
     return { message, group };
   }
 
-  private async findGroupById(groupId: string){
+  private async findGroupById(groupId: string) {
     const group = await this.prismaService.group.findUnique({
       where: { unique_id: groupId },
       include: { conversation: true }
@@ -149,13 +150,31 @@ export class ChatService {
   }
 
   private async createGroup(name: string, description: string, creatorId: string) {
-    return this.prismaService.group.create({
+    const userExists = await this.prismaService.user.findUnique({
+      where: { unique_id: creatorId },
+    });
+
+    if (!userExists) {
+      throw new Error(`User with ID ${creatorId} does not exist`);
+    }
+
+    const conversation = await this.prismaService.conversation.create({
+      data: {
+        is_group: true,
+      },
+    })
+
+    // Create the group
+    const group = await this.prismaService.group.create({
       data: {
         name,
         description,
-        created_by: creatorId
-      }
+        created_by: creatorId,
+        conversation_id: conversation.unique_id
+      },
     });
+
+    return group;
   }
 
   private async createConversationRecord(groupId: string) {
