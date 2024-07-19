@@ -32,8 +32,14 @@ import { OperationModule } from './user/operation/operation.module';
           },
           {
             path: 'operation',
-            module: OperationModule
-          }
+            module: OperationModule,
+            children: [
+              {
+                path: 'chat',
+                module: ChatModule,
+              }
+            ]
+          },
         ]
       }
     ]),
