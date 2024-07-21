@@ -1,5 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Param } from '@nestjs/common';
+import { User } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { hash } from 'bcryptjs';
+
 
 @Injectable()
 export class ChatService {
@@ -73,17 +76,66 @@ export class ChatService {
             },
           },
         }
-        // participants: {
-        //   some: {
-        //     user_id: userId,
-        //   },
-        // },
       },
-      // include: {
-      //   conversation: true,
-      // },
     });
   }
+  async getMyGroups(userId: string) {
+    const allGroups = await this.prismaService.group.findMany({
+      where: {
+        created_by: userId,
+      },
+      include: {
+        conversation: {
+          select: {
+            _count: {
+              select: {
+                participants: true
+              }
+            }
+          }
+        }
+      }
+    });
+
+    const updateGroups = allGroups.map((group) => {
+      const participantsCount = group.conversation._count.participants
+      delete group.conversation
+      return {
+        ...group,
+        participants_count: participantsCount
+      }
+    })
+
+    return updateGroups;
+  }
+
+  async getGroupDetail(groupId: string, userId: string) {
+    const group = await this.prismaService.group.findUnique({
+      where: {
+        unique_id: groupId,
+        created_by: userId,
+      },
+    });
+
+    const groupUser = await this.prismaService.user.findMany({
+      where: {
+        Participants: {
+          some: {
+            conversation_id: group.conversation_id
+          }
+        }
+      },
+      select: {
+        unique_id: true,
+        username: true,
+        profile_pic: true,
+        full_name: true,
+      }
+    })
+
+    return { group, users: groupUser }
+  }
+
 
   async createNewGroup(name: string, description: string, creatorId: string) {
     try {
@@ -100,27 +152,32 @@ export class ChatService {
   }
 
   async addUserToGroup(groupId: string, userId: string) {
-
-    const group = await this.findGroupById(groupId);
-
-    await this.addUserAsParticipants(userId, group.unique_id);
-
-    return group;
+    try {
+      const group = await this.findGroupById(groupId);
+      const existUser = await this.findUserById(userId);
+      await this.addUserAsParticipants(existUser.unique_id, group.conversation_id);
+      return group;
+    } catch (error) {
+      console.log(error);
+    }
   }
 
   async removeUserFromGroup(groupId: string, userId: string) {
-    const group = await this.findGroupById(groupId);
-
-    await this.prismaService.participants.delete({
-      where: {
-        user_id_conversation_id: {
-          user_id: userId,
-          conversation_id: group.conversation.unique_id,
+    try {
+      const group = await this.findGroupById(groupId);
+      const existUser = await this.findUserById(userId);
+      await this.prismaService.participants.delete({
+        where: {
+          user_id_conversation_id: {
+            user_id: existUser.unique_id,
+            conversation_id: group.conversation.unique_id,
+          },
         },
-      },
-    });
-
-    return group;
+      });
+      return { group, existUser };
+    } catch (error) {
+      console.log(error);
+    }
   }
 
   async sendMessageToGroup(groupId: string, senderId: string, content: string) {
@@ -150,6 +207,7 @@ export class ChatService {
   }
 
   private async createGroup(name: string, description: string, creatorId: string) {
+    console.log({ name, description, creatorId })
     const userExists = await this.prismaService.user.findUnique({
       where: { unique_id: creatorId },
     });
@@ -158,21 +216,30 @@ export class ChatService {
       throw new Error(`User with ID ${creatorId} does not exist`);
     }
 
-    const conversation = await this.prismaService.conversation.create({
-      data: {
-        is_group: true,
-      },
-    })
+    const group = await this.prismaService.$transaction(async (prisma) => {
+      const conversation = await prisma.conversation.create({
+        data: {
+          is_group: true,
+        },
+      })
 
-    // Create the group
-    const group = await this.prismaService.group.create({
-      data: {
-        name,
-        description,
-        created_by: creatorId,
-        conversation_id: conversation.unique_id
-      },
-    });
+      const participant = await prisma.participants.create({
+        data: {
+          user_id: creatorId,
+          conversation_id: conversation.unique_id,
+        }
+      })
+
+      const group = await prisma.group.create({
+        data: {
+          name,
+          description,
+          created_by: creatorId,
+          conversation_id: conversation.unique_id
+        },
+      });
+      return group;
+    })
 
     return group;
   }
@@ -197,6 +264,14 @@ export class ChatService {
         conversation_id: conversationId
       }
     });
+  }
+
+  private async findUserById(userId: string): Promise<User> {
+    const user = await this.prismaService.user.findUnique({ where: { unique_id: userId } });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    return user;
   }
 
 
