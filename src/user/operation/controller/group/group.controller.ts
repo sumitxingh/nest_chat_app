@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Post, UseGuards } from "@nestjs/common";
 import { GroupService } from "../../services/group/group.service";
 import { GetCurrentUser } from "src/decorator/currentUser.decorator";
 import { User } from "@prisma/client";
@@ -43,6 +43,45 @@ export class GroupController {
         meta: {
           message: 'All my groups fetched successfully',
           type: 'groupsResponseDTO',
+        }
+      }
+    })
+  }
+
+  @Get('group-detail/:id')
+  async getGroupDetail(@Param('id') groupId: string, @GetCurrentUser() user: User) {
+    return this.groupService.getGroupDetail(groupId, user.unique_id).then((group) => {
+      return {
+        data: group,
+        meta: {
+          message: 'Group detail fetched successfully',
+          type: 'groupDetailResponseDTO',
+        }
+      }
+    })
+  }
+
+  @Post('add-user-to-group')
+  async addUserToGroup(@Body() addUserToGroupDto: { groupId: string; userId: string }, @GetCurrentUser() currentUser: User) {
+    return this.groupService.addUserToGroup(addUserToGroupDto.groupId, addUserToGroupDto.userId, currentUser).then((data) => {
+      return {
+        data: data,
+        meta: {
+          message: 'User added to group successfully',
+          type: 'addUserToGroupResponseDto',
+        }
+      }
+    })
+  }
+
+  @Post('remove-user-from-group')
+  async removeUserFromGroup(@Body() removeUserFromGroupDto: { groupId: string; userId: string }, @GetCurrentUser() currentUser: User) {
+    return this.groupService.removeUserFromGroup(removeUserFromGroupDto.groupId, removeUserFromGroupDto.userId, currentUser).then((data) => {
+      return {
+        data: data,
+        meta: {
+          message: 'User removed from group successfully',
+          type: 'removeUserFromGroupResponseDto',
         }
       }
     })

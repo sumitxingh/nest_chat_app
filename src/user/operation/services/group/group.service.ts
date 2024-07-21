@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "src/prisma/prisma.service";
 import { UpdateGroupRequestDTO } from "../../dto/update_group_request.dt";
 import { handleProfilePic, rollbackProfilePic } from "src/common/functions/utils.function";
+import { Group, User } from "@prisma/client";
 
 @Injectable()
 export class GroupService {
@@ -65,6 +66,33 @@ export class GroupService {
     return updateGroups;
   }
 
+  async getGroupDetail(groupId: string, userId: string) {
+    const group = await this.prismaService.group.findUnique({
+      where: {
+        unique_id: groupId,
+        created_by: userId,
+      },
+    });
+
+    const groupUser = await this.prismaService.user.findMany({
+      where: {
+        Participants: {
+          some: {
+            conversation_id: group.conversation_id
+          }
+        }
+      },
+      select: {
+        unique_id: true,
+        username: true,
+        profile_pic: true,
+        full_name: true,
+      }
+    })
+
+    return { group, users: groupUser }
+  }
+
   private async createGroup(name: string, description: string, creatorId: string) {
     console.log({ name, description, creatorId })
     const userExists = await this.prismaService.user.findUnique({
@@ -101,6 +129,42 @@ export class GroupService {
     })
 
     return group;
+  }
+
+  async addUserToGroup(groupId: string, userId: string, currentUser: User) {
+    try {
+      const group = await this.findGroupById(groupId);
+      if (group.created_by !== currentUser.unique_id) {
+        throw new Error('Only group creator can add users');
+      }
+      const existUser = await this.findUserById(userId);
+      await this.addUserAsParticipants(existUser.unique_id, group.conversation_id);
+      return group;
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
+  async removeUserFromGroup(groupId: string, userId: string, currentUser: User) {
+    try {
+      const group = await this.findGroupById(groupId);
+      if (group.created_by !== currentUser.unique_id) {
+        throw new Error('Only group creator can remove users');
+      }
+      const existUser = await this.findUserById(userId);
+      if (group.created_by)
+        await this.prismaService.participants.delete({
+          where: {
+            user_id_conversation_id: {
+              user_id: existUser.unique_id,
+              conversation_id: group.conversation_id,
+            },
+          },
+        });
+      return { group, existUser };
+    } catch (error) {
+      console.log(error);
+    }
   }
 
   async updateGroup(updateGroupDto: UpdateGroupRequestDTO, groupPicUrl?: string) {
@@ -163,5 +227,24 @@ export class GroupService {
         conversation_id: conversationId
       }
     });
+  }
+
+  private async findGroupById(groupId: string): Promise<Group> {
+    const group = await this.prismaService.group.findUnique({
+      where: { unique_id: groupId },
+    })
+
+    if (!group) {
+      throw new NotFoundException('Group not found');
+    }
+    return group;
+  }
+
+  private async findUserById(userId: string): Promise<User> {
+    const user = await this.prismaService.user.findUnique({ where: { unique_id: userId } });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    return user;
   }
 }
