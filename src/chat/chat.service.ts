@@ -79,62 +79,7 @@ export class ChatService {
       },
     });
   }
-  async getMyGroups(userId: string) {
-    const allGroups = await this.prismaService.group.findMany({
-      where: {
-        created_by: userId,
-      },
-      include: {
-        conversation: {
-          select: {
-            _count: {
-              select: {
-                participants: true
-              }
-            }
-          }
-        }
-      }
-    });
 
-    const updateGroups = allGroups.map((group) => {
-      const participantsCount = group.conversation._count.participants
-      delete group.conversation
-      return {
-        ...group,
-        participants_count: participantsCount
-      }
-    })
-
-    return updateGroups;
-  }
-
-  async getGroupDetail(groupId: string, userId: string) {
-    const group = await this.prismaService.group.findUnique({
-      where: {
-        unique_id: groupId,
-        created_by: userId,
-      },
-    });
-
-    const groupUser = await this.prismaService.user.findMany({
-      where: {
-        Participants: {
-          some: {
-            conversation_id: group.conversation_id
-          }
-        }
-      },
-      select: {
-        unique_id: true,
-        username: true,
-        profile_pic: true,
-        full_name: true,
-      }
-    })
-
-    return { group, users: groupUser }
-  }
 
 
   async createNewGroup(name: string, description: string, creatorId: string) {
