@@ -167,7 +167,7 @@ export class GroupService {
     }
   }
 
-  async updateGroup(updateGroupDto: UpdateGroupRequestDTO, groupPicUrl?: string) {
+  async updateGroup(userId: string, updateGroupDto: UpdateGroupRequestDTO, groupPicUrl?: string) {
     try {
       // Retrieve the existing group from the database
       const existingGroup = await this.prismaService.group.findUnique({ where: { unique_id: updateGroupDto.unique_id } });

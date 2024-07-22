@@ -1,8 +1,13 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Post, Put, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
 import { GroupService } from "../../services/group/group.service";
 import { GetCurrentUser } from "src/decorator/currentUser.decorator";
 import { User } from "@prisma/client";
 import { AccessTokenGuard } from "src/user/auth/guards/access_token.guard";
+import { diskStorage } from "multer";
+import { FileInterceptor } from "@nestjs/platform-express";
+import { extname } from "path";
+import { format } from "date-fns";
+import { UpdateGroupRequestDTO } from "../../dto/update_group_request.dt";
 
 @Controller()
 @UseGuards(AccessTokenGuard)
@@ -19,6 +24,38 @@ export class GroupController {
           type: 'createGroupResponseDTO',
         }
       }
+    })
+  }
+
+  @Put('update-group')
+  @UseGuards(AccessTokenGuard)
+  @UseInterceptors(
+    FileInterceptor('group_pic', {
+      storage: diskStorage({
+        destination: './upload',
+        filename: (req, file, cb) => {
+          const fileExtName = extname(file.originalname);
+          const currentDate = format(new Date(), 'yyyyMMddhhmmss');
+          const newFileName = `group_pic_${currentDate}${fileExtName}`;
+          cb(null, newFileName);
+        },
+      }),
+    }),
+  )
+  async updateGroup(
+    @GetCurrentUser('unique_id') userId: string,
+    @Body() updateGroupDto: UpdateGroupRequestDTO,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    const groupPicUrl = file ? `${file.filename}` : undefined;
+    return this.groupService.updateGroup(userId, updateGroupDto, groupPicUrl).then((updatedGroup) => {
+      return {
+        data: updatedGroup,
+        meta: {
+          message: 'Group updated successfully',
+          type: 'GroupUpdatedResponseDto',
+        }
+      };
     })
   }
 
@@ -86,8 +123,6 @@ export class GroupController {
       }
     })
   }
-
-
 
 
 }

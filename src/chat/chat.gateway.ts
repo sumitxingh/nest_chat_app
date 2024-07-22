@@ -94,20 +94,10 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       });
 
 
-      client.on('create-group', async (data: { name: string, description: string, creatorId: string }) => {
-        const group = await this.chatService.createNewGroup(data.name, data.description, data.creatorId);
-        client.emit('group-created', group);
-      });
-
-      client.on('add-user-to-group', async (data: { groupId: string, userId: string }) => {
-        const group = await this.chatService.addUserToGroup(data.groupId, data.userId);
-        client.emit('user-added-to-group', group);
-      });
-
-      client.on('remove-user-from-group', async (data: { groupId: string, userId: string }) => {
-        const group = await this.chatService.removeUserFromGroup(data.groupId, data.userId);
-        client.emit('user-removed-from-group', group);
-      });
+      // client.on('create-group', async (data: { name: string, description: string, creatorId: string }) => {
+      //   const group = await this.chatService.createNewGroup(data.name, data.description, data.creatorId);
+      //   client.emit('group-created', group);
+      // });
 
       client.on('send-group-message', async (data: { groupId: string, senderId: string, content: string }) => {
         const { message, group } = await this.chatService.sendMessageToGroup(data.groupId, data.senderId, data.content);
