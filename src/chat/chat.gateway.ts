@@ -74,7 +74,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
           // Optionally, you can also check if the recipient is connected and join them to the room
           const recipientSocketId = Array.from(this.connectedUsers.entries()).find(([, username]) => username === data.to)?.[0];
-
+          console.log(recipientSocketId)
           if (recipientSocketId) {
             // Join the recipient to the same room
             this.server.sockets.sockets.get(recipientSocketId)?.join(room);
@@ -87,24 +87,60 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       });
 
 
+      client.on('group-message', async (data: { from: string, to: string, message: string, send_on: Date }) => {
+        console.log({ from: data.from, to: data.to, message: data.message, send_on: data.send_on })
+        const group = await this.prismaService.group.findUnique({
+          where: {
+            unique_id: data.to
+          },
+          select: {
+            unique_id: true,
+            conversation_id: true,
+            conversation: {
+              select: {
+                participants: {
+                  select: {
+                    unique_id: true,
+                    user: {
+                      select: {
+                        unique_id: true,
+                        username: true
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        })
 
-      // receive private messages
-      client.on('private-message', async (data: { from: string, message: string }) => {
-        this.server.to(user.username).emit('private-message', { from: data.from, message: data.message });
-      });
+        console.log(group)
 
-
-      // client.on('create-group', async (data: { name: string, description: string, creatorId: string }) => {
-      //   const group = await this.chatService.createNewGroup(data.name, data.description, data.creatorId);
-      //   client.emit('group-created', group);
-      // });
-
-      client.on('send-group-message', async (data: { groupId: string, senderId: string, content: string }) => {
-        const { message, group } = await this.chatService.sendMessageToGroup(data.groupId, data.senderId, data.content);
         if (group) {
-          this.server.to(`group-${group.conversation.unique_id}`).emit('group-message', message);
+          const room = `group-room-${group.conversation_id}`; // Unique room identifier
+          console.log(`room ${room}`)
+
+          // join all the participants to the room
+          group.conversation.participants.forEach((participant) => {
+            const participantSocketId = Array.from(this.connectedUsers.entries()).find(([, username]) => username === participant.user.username)?.[0];
+            if (participantSocketId) {
+              // Join the participant to the same room
+              this.server.sockets.sockets.get(participantSocketId)?.join(room);
+              console.log(`participantSocketId: ${participantSocketId} joined to ${room}`)
+            }
+          });
+
+          // Emit the group message to the room
+          this.server.to(room).emit('receive-group-message', { from: user.username, to: data.to, message: data.message, send_on: data.send_on })
+          console.log(`Message sent to room ${room}: ${data.message}`);
+          await this.chatService.sendMessageToGroup(data.to, user.unique_id, data.message);
+        } else {
+          client.emit('group-message-error', { message: 'Conversation not found' });
         }
-      });
+
+
+      })
+
 
 
     } catch (error) {
