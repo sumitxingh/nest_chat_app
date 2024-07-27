@@ -35,6 +35,15 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }
 
       const user = await this.prismaService.user.findUnique({ where: { unique_id: payload.sub } });
+      const allConversationIds = await this.prismaService.conversation.findMany({
+        where: {
+          participants: {
+            some: {
+              user_id: user.unique_id
+            }
+          }
+        }
+      })
       if (!user) {
         throw new Error("User not found");
       }
@@ -43,6 +52,10 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       // console.log session id and user id
       console.log(client.handshake.auth)
       console.log(`Client ${client.id} connected as ${user.username}`);
+      allConversationIds.forEach((conversation) => {
+        client.join(conversation.unique_id)
+        // console.log(`${user.username} join ${conversation.unique_id}`)
+      })
       this.server.emit('users', Array.from(this.connectedUsers.values()));
 
       // Listen for typing events
@@ -50,29 +63,18 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         this.server.emit('typing', { username: user.username, isTyping });
       });
 
-      // send messages
+      // public message
       client.on('message', async (data: { from: string, to: string, message: string, send_on: Date }) => {
 
         this.server.emit('receive-message', { from: user.username, to: data.to, message: data.message, send_on: data.send_on });
       });
 
-
       client.on('private-message', async (data: { from: string, to: string, message: string, send_on: Date }) => {
         const toClient = await this.prismaService.user.findUnique({ where: { username: data.to } });
-        let conversationId = await this.chatService.getConversationId({ from: data.from, to: data.to })
-
-        if (toClient) {
-          const room = `private-room-${conversationId}`; // Unique room identifier
-          console.log(`room ${room}`)
-
-          // Join the sender to the room
-          client.join(room);
-
-          // Emit the private message to the room
-          this.server.to(room).emit('receive-private-message', { from: data.from, to: data.to, message: data.message, send_on: data.send_on });
-          console.log(`Message sent to room ${room}: ${data.message}`);
-
-          // Optionally, you can also check if the recipient is connected and join them to the room
+        let { conversationId, create } = await this.chatService.getConversationId({ from: data.from, to: data.to })
+        const room = conversationId
+        console.log({ conversationId, create })
+        if (create) {
           const recipientSocketId = Array.from(this.connectedUsers.entries()).find(([, username]) => username === data.to)?.[0];
           console.log(recipientSocketId)
           if (recipientSocketId) {
@@ -80,6 +82,10 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
             this.server.sockets.sockets.get(recipientSocketId)?.join(room);
             console.log(`recipientSocketId: ${recipientSocketId} joined to ${room}`)
           }
+        }
+
+        if (toClient) {
+          this.server.to(room).emit('receive-private-message', { from: data.from, to: data.to, message: data.message, send_on: data.send_on });
           await this.chatService.handlePrivateMessage({ from: user.username, to: data.to, message: data.message, conversationId });
         } else {
           client.emit('private-message-error', { message: 'Recipient not found' });
@@ -114,31 +120,18 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
           }
         })
 
-        console.log(group)
+        // console.log(group)
 
         if (group) {
-          const room = `group-room-${group.conversation_id}`; // Unique room identifier
+          //   // const room = `group-room-${group.conversation_id}`; // Unique room identifier
+          const room = group.conversation_id
           console.log(`room ${room}`)
-
-          // join all the participants to the room
-          group.conversation.participants.forEach((participant) => {
-            const participantSocketId = Array.from(this.connectedUsers.entries()).find(([, username]) => username === participant.user.username)?.[0];
-            if (participantSocketId) {
-              // Join the participant to the same room
-              this.server.sockets.sockets.get(participantSocketId)?.join(room);
-              console.log(`participantSocketId: ${participantSocketId} joined to ${room}`)
-            }
-          });
-
-          // Emit the group message to the room
           this.server.to(room).emit('receive-group-message', { from: user.username, to: data.to, message: data.message, send_on: data.send_on })
           console.log(`Message sent to room ${room}: ${data.message}`);
           await this.chatService.sendMessageToGroup(data.to, user.unique_id, data.message);
         } else {
           client.emit('group-message-error', { message: 'Conversation not found' });
         }
-
-
       })
 
 

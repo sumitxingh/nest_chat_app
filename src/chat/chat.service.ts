@@ -20,7 +20,7 @@ export class ChatService {
     });
   }
 
-  async getConversationId(data: { from: string, to: string }): Promise<string> {
+  async getConversationId(data: { from: string, to: string }): Promise<{ conversationId: string, create: boolean }> {
     const { from, to } = data;
     const usernames = [from, to];
 
@@ -43,7 +43,7 @@ export class ChatService {
 
     // If the conversation exists, return its ID
     if (existingConversation) {
-      return existingConversation.unique_id;
+      return { conversationId: existingConversation.unique_id, create: false };
     }
 
     // Otherwise, create a new conversation
@@ -63,7 +63,7 @@ export class ChatService {
     });
 
     console.log(newConversation);
-    return newConversation.unique_id;
+    return { conversationId: newConversation.unique_id, create: true };
   }
 
   async getUserGroups(userId: string) {

@@ -87,7 +87,7 @@ export class UsersService {
     })
 
     console.log(`message api call`)
-    console.dir(allMessages, { depth: 'infinite' })
+    // console.dir(allMessages, { depth: 'infinite' })
 
     const messages: MessageResponseDto[] = allMessages.map(item => ({
       from: item.sender.username,
