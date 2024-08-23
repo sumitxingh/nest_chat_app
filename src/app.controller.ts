@@ -4,10 +4,11 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { basename, extname } from 'path';
 import { format } from 'date-fns';
+import * as process from 'node:process';
 
 @Controller()
 export class AppController {
-  constructor(private readonly appService: AppService) {}
+  constructor(private readonly appService: AppService) { }
 
   @Get()
   getHello() {
@@ -15,7 +16,8 @@ export class AppController {
     return {
       data: {
         timeZone: currentTimezone,
-        currntTime: new Date()
+        currntTime: new Date(),
+        processId: process.pid
       },
       meta: {
         message: 'Hello from ' + currentTimezone,

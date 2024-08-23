@@ -3,6 +3,7 @@ import { AppModule } from './app.module';
 import { ConfigService } from '@nestjs/config';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
+import { ClusterService } from './app-cluster.service';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -28,5 +29,5 @@ async function bootstrap() {
   // Log the server running information
   console.log(`Server is running on http://localhost:${port}`);
 }
-
-bootstrap();
+ClusterService.clusterize(bootstrap);
+// bootstrap();
