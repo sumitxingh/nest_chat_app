@@ -15,6 +15,6 @@ import { AuthModule } from './auth/auth.module';
   ],
   controllers: [UsersController],
   providers: [UsersService, PrismaService],
-  exports: [UsersService],
+  exports: [UsersService, AuthModule],
 })
 export class UserModule { }

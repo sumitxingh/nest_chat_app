@@ -1,31 +1,34 @@
-import { Controller, Get, Post, Body } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UseGuards, Put, UseInterceptors, UploadedFile } from '@nestjs/common';
 import { ChatService } from './chat.service';
+import { AccessTokenGuard } from 'src/user/auth/guards/access_token.guard';
 
-@Controller('chat')
+@Controller()
+@UseGuards(AccessTokenGuard)
 export class ChatController {
   constructor(private readonly chatService: ChatService) { }
 
-  // @Get()
-  // async getAllMessages() {
-  //   const allMessage = await this.chatService.getAllMessages();
-  //   return {
-  //     data: allMessage,
-  //     meta: {
-  //       message: 'All messages',
-  //       type: 'allMessagesResponseDto',
-  //     }
-  //   };
-  // }
+  @Post('create-group')
+  async createGroup(@Body() createGroupDto: { name: string; description?: string; creatorId: string }) {
+    return this.chatService.createNewGroup(createGroupDto.name, createGroupDto.description, createGroupDto.creatorId).then((group) => {
+      return {
+        data: group,
+        meta: {
+          message: 'Group created successfully',
+          type: 'createGroupResponseDTO',
+        }
+      }
+    })
+  }
 
-  // @Post()
-  // async createMessage(@Body() body: { user: string, message: string }) {
-  //   const message = await this.chatService.createMessage(body.user, body.message);
-  //   return {
-  //     data: message,
-  //     meta: {
-  //       message: 'Message created successfully',
-  //       type: 'createMessageResponseDto',
-  //     }
-  //   };
-  // }
+  @Get('messages')
+  async getAllMessages() {
+    return {
+      data: 'allMessage',
+      meta: {
+        message: 'All messages',
+        type: 'allMessagesResponseDto',
+      }
+    };
+  }
+
 }

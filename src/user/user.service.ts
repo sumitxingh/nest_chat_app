@@ -57,7 +57,20 @@ export class UsersService {
         sender: true,
         conversation: {
           include: {
+            Group: {
+              select: {
+                name: true,
+                unique_id: true
+              }
+            },
             participants: {
+              where: {
+                NOT: {
+                  user: {
+                    username: createUserDto.username
+                  }
+                }
+              },
               select: {
                 user: {
                   select: {
@@ -72,13 +85,13 @@ export class UsersService {
         }
       }
     })
-    console.log(`message api call`)
 
+    console.log(`message api call`)
+    // console.dir(allMessages, { depth: 'infinite' })
 
     const messages: MessageResponseDto[] = allMessages.map(item => ({
       from: item.sender.username,
-      to: item.conversation.participants
-        .find(participant => participant.user.username !== item.sender.username)?.user.username || '', // Get the other participant's username
+      to: item.conversation.participants.length === 1 ? item.conversation.participants[0].user.username : item.conversation.Group.unique_id,// Get the other participant's username
       message: item.content,
       send_on: new Date(item.send_at)
     }));

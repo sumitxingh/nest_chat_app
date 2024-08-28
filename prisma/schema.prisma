@@ -71,14 +71,16 @@ model Participants {
 }
 
 model Group {
-  id           Int          @id @default(autoincrement())
-  unique_id    String       @unique @default(uuid())
-  name         String
-  description  String?
-  created_at   DateTime     @default(now())
-  created_by   String
-  creator      User         @relation(fields: [created_by], references: [unique_id])
-  conversation Conversation @relation(fields: [unique_id], references: [unique_id])
+  id              Int          @id @default(autoincrement())
+  unique_id       String       @unique @default(uuid())
+  name            String
+  group_pic       String?
+  description     String?
+  conversation_id String       @unique
+  created_at      DateTime     @default(now())
+  created_by      String
+  creator         User         @relation(fields: [created_by], references: [unique_id])
+  conversation    Conversation @relation(fields: [conversation_id], references: [unique_id])
 
   @@map("group")
 }

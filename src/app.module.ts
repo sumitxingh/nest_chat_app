@@ -21,6 +21,7 @@ import { OperationModule } from './user/operation/operation.module';
     }),
     ChatModule,
     UserModule,
+    AuthModule,
     RouterModule.register([
       {
         path: 'user',
@@ -32,8 +33,14 @@ import { OperationModule } from './user/operation/operation.module';
           },
           {
             path: 'operation',
-            module: OperationModule
-          }
+            module: OperationModule,
+            children: [
+              {
+                path: 'chat',
+                module: ChatModule,
+              }
+            ]
+          },
         ]
       }
     ]),
